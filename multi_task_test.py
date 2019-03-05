@@ -206,7 +206,7 @@ import datetime
 import os
 
 # 文件信息
-file = 'datas_ace.txt'
+file = 'train_eval_data\datas_ace.txt'
 # 生成文件的存储位置
 store_path = "ace_data_2016_12_02"
 # batch_size的大小
@@ -318,23 +318,23 @@ with tf.Graph().as_default():
         for i in range(num_epochs):
             for j in range(datas.instances_size // data_batch_size):
                 x, t, c, y_e, y_r, pos_c, pos_t, sentences_f, c_context, t_context, _, _, _, _, _, _ = datas.next_cnn_data()
-            #                 print ", ".join(map(lambda t:datas.all_words[t]  , x[0]))
-            #     事件类型预测
-            train_step(input_x=x, input_event_y=y_e, input_role_y=y_r,
-                       input_t=t, input_c=c, input_c_pos=pos_c, input_t_pos=pos_t,
-                       dropout_keep_prob=0.8, sentence_features=sentences_f,
-                       input_t_context=t_context, input_c_context=c_context,
-                       train_op=train_op_event, loss=model.loss_event, accuracy=model.accuracy_event,
-                       epoch=i, stype="event"
-                       )
-            #     角色类型预测
-            train_step(input_x=x, input_event_y=y_e, input_role_y=y_r,
-                       input_t=t, input_c=c, input_c_pos=pos_c, input_t_pos=pos_t,
-                       dropout_keep_prob=0.8, sentence_features=sentences_f,
-                       input_t_context=t_context, input_c_context=c_context,
-                       train_op=train_op_role, loss=model.loss_role, accuracy=model.accuracy_role,
-                       epoch=i, stype="role"
-                       )
+                #                 print ", ".join(map(lambda t:datas.all_words[t]  , x[0]))
+                #     事件类型预测
+                train_step(input_x=x, input_event_y=y_e, input_role_y=y_r,
+                           input_t=t, input_c=c, input_c_pos=pos_c, input_t_pos=pos_t,
+                           dropout_keep_prob=0.8, sentence_features=sentences_f,
+                           input_t_context=t_context, input_c_context=c_context,
+                           train_op=train_op_event, loss=model.loss_event, accuracy=model.accuracy_event,
+                           epoch=i, stype="event"
+                           )
+                #     角色类型预测
+                train_step(input_x=x, input_event_y=y_e, input_role_y=y_r,
+                           input_t=t, input_c=c, input_c_pos=pos_c, input_t_pos=pos_t,
+                           dropout_keep_prob=0.8, sentence_features=sentences_f,
+                           input_t_context=t_context, input_c_context=c_context,
+                           train_op=train_op_role, loss=model.loss_role, accuracy=model.accuracy_role,
+                           epoch=i, stype="role"
+                           )
         # john.zhang 2016-12-16 最后50个instance作为测试集 用于测试数据
         saver.save(sess,save_predicateMode_path)
         saver.restore(sess,save_predicateMode_path)

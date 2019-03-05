@@ -79,7 +79,7 @@ def get_context_features(x, epos_id=113, windows=3):
 
 
 class datasets(object):
-    def __init__(self, file='datas_ace.txt', store_path="ace_data_cl", batch_size=5,
+    def __init__(self, file='train_eval_data\datas_ace.txt', store_path="ace_data_cl", batch_size=5,
                  max_sequence_length=20, windows=3, eval_num=50, word2vec_bin_file="word2vecModel\\vectors.model"):
         """
         file： 数据集
