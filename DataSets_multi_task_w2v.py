@@ -14,6 +14,7 @@ john.zhang 2016-12-22
 10 候选词及其上下文词word2vec
 11 候选词及其上下文词性
 """
+import random
 from collections import namedtuple
 import numpy as np
 import _pickle as cPickle
@@ -80,7 +81,7 @@ def get_context_features(x, epos_id=113, windows=3):
 
 class datasets(object):
     def __init__(self, file='train_eval_data\datas_ace.txt', store_path="ace_data_cl", batch_size=5,
-                 max_sequence_length=20, windows=3, eval_num=50, word2vec_bin_file="word2vecModel\\vectors.model"):
+                 max_sequence_length=50, windows=3, eval_num=0-Config.eval_num, word2vec_bin_file="word2vecModel\\vectors.model"):
         """
         file： 数据集
         store_path: 生成的数据存储的位置
@@ -156,10 +157,11 @@ class datasets(object):
                 #                 print("words_length:{}, pos_length:{}, marks_length:{}".format(len(words),len(pos_taggings),len(marks))
                 assert len(words) == len(pos_taggings) == len(marks)  # 判定数目相等
                 # 长度超出最大距离
-                if len(words) <= max_sequence_length:  # 超出最大长度的不记录
-                    instances.append(
-                        data_model(words=words, pos_taggings=pos_taggings, marks=marks, label_event=label_event,
-                                   label_role=label_role))
+                if len(words) > max_sequence_length:  # 超出最大长度的不记录
+                    print("dmtw2vline161", len(words), "超过长度")
+                instances.append(
+                    data_model(words=words, pos_taggings=pos_taggings, marks=marks, label_event=label_event,
+                               label_role=label_role))
                 # 清空
                 words = []  # 词
                 pos_taggings = []  # 词性
@@ -216,6 +218,19 @@ class datasets(object):
         self.batch_nums = self.instances_size // self.batch_size  # 每一次epoch需要的batch_nums
         self.index = np.arange(self.instances_size)  # 每一个instance对应的id
         self.point = 0  # 用于记录当前实例位置
+        self.wordIdVec = []
+
+        for word in self.all_words:
+            if self.word2vec.get(word) is not None:
+                self.wordIdVec.append(list(self.word2vec.get(word)))
+            else:
+                # self.wordIdVec.append(list(np.zeros(shape=(1, self.embedding_size))))
+                t = [random.uniform(-1.0,1.0) for i in range(self.embedding_size)]
+                sum = 0.0
+                for _ in t:
+                    sum += _ ** 2
+                self.wordIdVec.append([i/sum for i in t])
+
 
         # 判断文件是否存在
         if not os.path.exists(store_path):
@@ -252,6 +267,8 @@ class datasets(object):
         end = self.point
         batch_instances = map(lambda x: self.instances[x], self.index[start:end])
         return batch_instances
+
+
 
     # 转换成神经网络能够识别的
     def next_cnn_data(self):
@@ -298,6 +315,8 @@ class datasets(object):
             # 找出当前句子的触发词下标 这里强制规定一个句子只能有一个触发词
             index_triggers = find_candidates(marks, ['T'])  # 找出当前句子的触发词的下标id
             #             print("index_triggers:{}".format(index_triggers)
+            if len(index_triggers) == 0:
+                index_triggers = [0]
             assert (len(index_triggers)) == 1
             # print(index_triggers
             y_event.append(label_event)  # 事件类别
@@ -367,16 +386,18 @@ class datasets(object):
             # 触发词位置向量
             pos_trigger = list(range(-index_triggers[0], 0)) + list(range(0, self.max_sequence_length - index_triggers[0]))
             pos_t.append(pos_trigger)
+
+            # print("dtw2vline390 index_candidate[0] ",index_candidates[0],"postrigger",len(pos_trigger),"pos_candidate",len(pos_candidate))
             # 根据句子当中触发词的下标id找出其在词表当中的位置 并进行填充
             t.append([index_words[index_triggers[0]]] * self.max_sequence_length)
             # 根据句子当中候选词的下标id找出其在词表当中的位置 并进行填充
             c.append([index_words[index_candidates[0]]] * self.max_sequence_length)
             # 确定长度是否一致
-            assert len(words) == len(marks) == len(pos_taggings) == len(index_words) == len(sentence_fatures) == len(
-                pos_candidate) == len(pos_trigger)
-        assert len(sentences_fatures) == len(y_event) == len(y_role) == len(x) == len(t) == len(c) == len(pos_c) == len(
-            pos_t) == len(
-            pos_tag) == len(x_w2v) == len(c_w2v) == len(t_w2v) == len(t_pos_tag) == len(c_pos_tag)
+            if len(sentence_fatures)!=len(pos_candidate):
+                print("dtw2vline396",len(sentence_fatures)," ",len(pos_candidate))
+            assert len(words) == len(marks) == len(pos_taggings) == len(index_words) == len(sentence_fatures) == len(pos_candidate) == len(pos_trigger)
+        assert len(sentences_fatures) == len(y_event) == len(y_role) == len(x) == len(t) == len(c) == len(pos_c) == \
+               len(pos_t) == len(pos_tag) == len(x_w2v) == len(c_w2v) == len(t_w2v) == len(t_pos_tag) == len(c_pos_tag)
         # 记录触发词和候选词所在句子当中的位置 并且生成触发词位置矩阵和候选词位置矩阵
         # x:(词的id) t:触发词(词的id) c:候选词(词的id) y_event:事件的类别(类别id) y_role:角色的类别 pos_c:候选词位置向量 pos_t: 触发词位置向量
         # c_context 候选词的上下文信息 t_context 触发词的上下文信息  pos_tag 句子的词性 x_w2v 句子的word2vec特征 t_w2v 触发词的word2vec特征 c_w2v 候选词的word2vec特征
@@ -427,10 +448,14 @@ class datasets(object):
             index_candidates = find_candidates(marks, ['B'])
             #             print("index_candidate:{}".format(index_candidates)
             #             print(", ".join(words)
+
             assert (len(index_candidates)) == 1
             # 找出当前句子的触发词下标 这里强制规定一个句子只能有一个触发词
             index_triggers = find_candidates(marks, ['T'])  # 找出当前句子的触发词的下标id
             #             print("index_triggers:{}".format(index_triggers)
+
+            if len(index_triggers) == 0:
+                index_triggers = [0]
             assert (len(index_triggers)) == 1
             # print(index_triggers
             y_event.append(label_event)  # 事件类别
@@ -497,18 +522,19 @@ class datasets(object):
             # 候选词位置向量
             pos_candidate = list(range(-index_candidates[0], 0)) + list(range(0, self.max_sequence_length - index_candidates[0]))
             pos_c.append(pos_candidate)
+
             # 触发词位置向量
             pos_trigger = list(range(-index_triggers[0], 0)) + list(range(0, self.max_sequence_length - index_triggers[0]))
             pos_t.append(pos_trigger)
+            # if len(pos_candidate)!=len(pos_trigger):
+            print("dmtw2vline528，pos_can长度",len(pos_candidate),"pos_tri长度",len(pos_trigger))
             # 根据句子当中触发词的下标id找出其在词表当中的位置 并进行填充
             t.append([index_words[index_triggers[0]]] * self.max_sequence_length)
             # 根据句子当中候选词的下标id找出其在词表当中的位置 并进行填充
             c.append([index_words[index_candidates[0]]] * self.max_sequence_length)
             # 确定长度是否一致
-            assert len(words) == len(marks) == len(pos_taggings) == len(index_words) == len(sentence_fatures) == len(
-                pos_candidate) == len(pos_trigger)
-        assert len(sentences_fatures) == len(y_event) == len(y_role) == len(x) == len(t) == len(c) == len(pos_c) == len(
-            pos_t) == len(
+            assert len(words) == len(marks) == len(pos_taggings) == len(index_words) == len(sentence_fatures) == len(pos_candidate) == len(pos_trigger)
+        assert len(sentences_fatures) == len(y_event) == len(y_role) == len(x) == len(t) == len(c) == len(pos_c) == len(pos_t) == len(
             pos_tag) == len(x_w2v) == len(c_w2v) == len(t_w2v) == len(t_pos_tag) == len(c_pos_tag)
         # 记录触发词和候选词所在句子当中的位置 并且生成触发词位置矩阵和候选词位置矩阵
         # x:(词的id) t:触发词(词的id) c:候选词(词的id) y_event:事件的类别(类别id) y_role:角色的类别 pos_c:候选词位置向量 pos_t: 触发词位置向量
@@ -519,27 +545,27 @@ class datasets(object):
                np.array(x_w2v), np.array(t_w2v), np.array(c_w2v), t_pos_tag, c_pos_tag
 
 
-"""
-测试代码 john.zhang 2016-12-22 已验证 正确
-"""
-datas = datasets()
-print(datas.all_marks)
-x, t, c, y_event, y_role, pos_c, pos_t, sentences_fatures, c_context, t_context, pos_tag, x_w2c, t_w2v, c_w2v,\
-    t_pos_t, c_pos_t = datas.eval_cnn_data()
-for i in range(len(x)):
-    print("原始句子:{}".format(", ".join(map(lambda x: datas.all_words[x], x[i]))))
-    print("词性:{}".format(", ".join(map(lambda x: datas.all_pos_taggings[x], pos_tag[i]))))
-    print("触发词:{}".format(", ".join(map(lambda x: datas.all_words[x], t[i]))))
-    print("候选词:{}".format(", ".join(map(lambda x: datas.all_words[x], c[i]))))
-    print("事件类型：{}".format(y_event[i]))
-    print("角色类别:{}".format(y_role[i]))
-    print("候选词位置向量：{}".format(pos_c[i]))
-    print("触发词位置向量:{}".format(pos_t[i]))
-    print("候选词的上下文：{}".format(", ".join(map(lambda x: datas.all_words[x], c_context[i]))))
-    print("触发词上下文词性:{}".format(", ".join(map(lambda x: datas.all_pos_taggings[x], t_pos_t[i]))))
-    print("候选词上下文词性:{}".format(", ".join(map(lambda x:datas.all_pos_taggings[x], c_pos_t[i]))))
-    print("触发词的上下文：{}".format(", ".join(map(lambda x: datas.all_words[x], t_context[i]))))
-
-    context_words = map(lambda contexts: map(lambda x: datas.all_words[x], contexts), sentences_fatures[i])
-    for context_word in context_words:
-        print("上下文特征：{}".format(", ".join(context_word)))
+# """
+# 测试代码 john.zhang 2016-12-22 已验证 正确
+# """
+# datas = datasets()
+# print(datas.all_marks)
+# x, t, c, y_event, y_role, pos_c, pos_t, sentences_fatures, c_context, t_context, pos_tag, x_w2c, t_w2v, c_w2v,\
+#     t_pos_t, c_pos_t = datas.eval_cnn_data()
+# for i in range(len(x)):
+#     print("原始句子:{}".format(", ".join(map(lambda x: datas.all_words[x], x[i]))))
+#     print("词性:{}".format(", ".join(map(lambda x: datas.all_pos_taggings[x], pos_tag[i]))))
+#     print("触发词:{}".format(", ".join(map(lambda x: datas.all_words[x], t[i]))))
+#     print("候选词:{}".format(", ".join(map(lambda x: datas.all_words[x], c[i]))))
+#     print("事件类型：{}".format(y_event[i]))
+#     print("角色类别:{}".format(y_role[i]))
+#     print("候选词位置向量：{}".format(pos_c[i]))
+#     print("触发词位置向量:{}".format(pos_t[i]))
+#     print("候选词的上下文：{}".format(", ".join(map(lambda x: datas.all_words[x], c_context[i]))))
+#     print("触发词上下文词性:{}".format(", ".join(map(lambda x: datas.all_pos_taggings[x], t_pos_t[i]))))
+#     print("候选词上下文词性:{}".format(", ".join(map(lambda x:datas.all_pos_taggings[x], c_pos_t[i]))))
+#     print("触发词的上下文：{}".format(", ".join(map(lambda x: datas.all_words[x], t_context[i]))))
+#
+#     context_words = map(lambda contexts: map(lambda x: datas.all_words[x], contexts), sentences_fatures[i])
+#     for context_word in context_words:
+#         print("上下文特征：{}".format(", ".join(context_word)))

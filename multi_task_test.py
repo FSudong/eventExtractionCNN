@@ -62,6 +62,7 @@ class ace_cnn_model():
         # 生成word_embedding 这部分操作相对比较简单 建议用cpu做
         with tf.device('/job:localhost/replica:0/task:0/device:CPU:0'), tf.name_scope("word_embedding_layer"):
             # 词表 [vocab_size, embedding_size]
+            zl = tf.random_normal(shape=[vocab_size, word_embedding_size], mean=0.0, stddev=0.5)
             W = tf.Variable(tf.random_normal(shape=[vocab_size, word_embedding_size], mean=0.0, stddev=0.5),
                             name="word_table")
             # 句子特征向量 [batch_size, sentence_length, word_embedding]
@@ -206,17 +207,17 @@ import datetime
 import os
 
 # 文件信息
-file = 'train_eval_data\datas_ace.txt'
+file = 'datas_ace.txt'
 # 生成文件的存储位置
 store_path = "ace_data_2016_12_02"
 # batch_size的大小
 data_batch_size = 20
 # 句子的最大长度
-max_sequence_length = 25
+max_sequence_length = 50
 # 选取的上下文窗口的大小
 windows = 3
 # 数据集
-datas = datasets(file=file, store_path=store_path, batch_size=data_batch_size, max_sequence_length=max_sequence_length,
+datas = datasets(file=file, store_path=store_path, batch_size=data_batch_size, max_sequence_length=Config.max_sequence_length,
                  windows=windows)
 # 神经网络模型的一些参数
 # 模型的最大长度
@@ -353,8 +354,7 @@ with tf.Graph().as_default():
                                   dropout_keep_prob=1.0, sentence_features=sentences_f, input_t_context=t_context,
                                   input_c_context=c_context, accuracy=model.accuracy_role, predicts=model.predicts_role,
                                   stype="role")
-        convert_event = {0: "非事件", 1: "会谈", 2: "股票降低类事件", 3: "股票异动类事件", 4: "股票交易类事件",
-                         5: "业绩上升类事件", 6: "业绩下滑类事件", 7: "产品涨价类事件", 8: "产品跌价类事件"
+        convert_event = {0: "非事件", 1: "会谈"
                          }  # 事件类型准换
         convert_role = {0: "其它角色", 1: "施事角色", 2: "受事角色", 3: "时间角色", 4: "地点角色", 5: "数字角色"}  # 角色类型转换
         # 输出测试结果
