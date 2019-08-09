@@ -4,10 +4,10 @@
 
 ## Suggestions  
 
-Sorry, the data was in my last compute. However, the computer's disk was destroyed. So the paths below are recommended.
-1、Read the part which loads data, and you will finally inference what the data should be like.
-2、Ask the author for help. His github link was given in Readme.md
-3、Give up. according to my experience, this code does not preform well . 
+Sorry, the data was in my last compute. However, the computer's disk was destroyed. So the paths below are recommended.  
+1、Read the part which loads data, and you will finally inference what the data should be like.  
+2、Ask the author for help. His github link was given in Readme.md  
+3、Give up. according to my experience, this code does not preform well .   
 
 ## 运行环境  
 python 3.6 + pyltp
